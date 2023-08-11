@@ -1,27 +1,29 @@
 #pragma once
 
-#include "Token.h"
-#include "AstNodes.h"
-#include "Exception.h"
-
 #include <string>
 #include <vector>
 #include <unordered_set>
 
+#include "exception/Exception.h"
+#include "lexer/Token.h"
+#include "AstNode.h"
+
 class Parser {
-public:
+private:
     std::vector<Token>* tokens;
     int index;
     Token curTok;
 
     std::vector<AstNode> importStatements;
 
+public:
     Parser(std::vector<Token>& tokens) {
         this->tokens = &tokens;
         this->index = -1;
         this->curTok = getNext();
     }
 
+private:
     bool hasNext(int steps = 1) {
         return index + steps < (int) tokens->size();
     }
@@ -38,7 +40,12 @@ public:
     }
 
     Token lookAhead(int steps = 1) {
-        return hasNext(steps) ? tokens->at(index + steps) : Token::getNullToken();
+        return hasNext(steps) ? tokens->at((int)(index + steps)) : Token::getNullToken();
+    }
+
+    void returnToIndex(int i) {
+        index = i-1;
+        getNext();
     }
 
     void skipSemis() {
@@ -47,12 +54,17 @@ public:
         }
     }
 
-    // Parse Entry Point
+public:
+    // Parse entry point
     std::vector<AstNode> parse() {
-        return statements(END);
+        std::vector<AstNode> ast = statements(END);
+        if (!curTok.matches(END)) {
+            throw Exception("Did not reach end of input! " + curTok.pos.toString());
+        }
+        return ast;
     }
 
-    // Statement Parsing
+private:
     std::vector<AstNode> statements(int ENDTYPE) {
         std::vector<AstNode> statements;
 
@@ -62,7 +74,7 @@ public:
             if (statement_node == nullptr) break;
 
             if (!curTok.matches(SEMICOLON)) {
-                throw Exception("Expected semicolon after statement.");
+                throw Exception("Expected semicolon after statement " + curTok.pos.toString());
             }
             statements.push_back(statement_node);
             skipSemis();
@@ -72,13 +84,16 @@ public:
     }
 
     AstNode statement() {
-
         while (curTok.matches(KEYWORD, "import")) {
             importStatement();
         }
 
-        if (curTok.matches(KEYWORD, "var") || curTok.matches(KEYWORD, "const")) {
+        if ((curTok.matches(KEYWORD, "const") || curTok.matches(KEYWORD, "var")) &&
+            lookAhead().matches(ID)) {
             return varDeclaration();
+        }
+        else if (curTok.matches(ID) && lookAhead().matches(OP, "=")) {
+            return varAssign();
         }
         else if (curTok.matches(KEYWORD, "if")) {
             return ifStatement();
@@ -89,79 +104,103 @@ public:
         else if (curTok.matches(KEYWORD, "while")) {
             return whileStatement();
         }
-        else if (curTok.matches(KEYWORD, "fun")) {
-            return functionDef();
-        }
-        else if (curTok.matches(KEYWORD, "return")) {
-            return returnStatement();
-        }
         else if (curTok.matches(KEYWORD, "break")) {
             return breakStatement();
         }
         else if (curTok.matches(KEYWORD, "continue")) {
             return continueStatement();
         }
-        else if (curTok.matches(KEYWORD, "class")) {
-            return classDef();
+        else if (curTok.matches(KEYWORD, "fn")) {
+            return functionDef();
+        }
+        else if (curTok.matches(KEYWORD, "return")) {
+            return returnStatement();
+        }
+        else if (curTok.matches(KEYWORD, "type")) {
+            return structureDef();
         }
 
         return expr(); // Can return nullptr
     }
 
-    // Import Statement Parsing
     void importStatement() {
         if (!curTok.matches(KEYWORD, "import")) {
-            throw Exception("Expected keyword 'import'.");
+            throw Exception("Expected keyword 'import' " + curTok.pos.toString());
         }
         getNext();
 
         if (!curTok.matches(STRING)) {
-            throw Exception("Expected module name.");
+            throw Exception("Expected module name " + curTok.pos.toString());
         }
         Token fileNameTok = curTok;
         getNext();
 
-        Token varNameTok;
-        if (curTok.matches(KEYWORD, "as")) {
-            getNext();
+        this->importStatements.push_back(AstNode(new ImportNode(fileNameTok)));
+    }
 
-            if (!curTok.matches(ID)) {
-                throw Exception("Expected identifier.");
-            }
-            varNameTok = curTok;
-            getNext();
-        }
+    // Parse a type name
+    // id(.id)*(\[\])*
+    AstNode typeExpr() {
+        AstNode typeExprNode = nullptr;
+        int resetIndex = this->index;
 
-        if (!curTok.matches(SEMICOLON)) {
-            throw Exception("Expected semicolon after statement.");
+        if (!curTok.matches(ID)) {
+            returnToIndex(resetIndex);
+            return nullptr;
         }
         getNext();
 
-        this->importStatements.push_back(AstNode(new ImportNode(fileNameTok, varNameTok)));
+        while (curTok.matches(DOT) && lookAhead().matches(ID)) {
+            // Access subtype
+            getNext();
+            getNext();
+        }
+
+        while (curTok.matches(LBRACKET) && lookAhead().matches(RBRACKET)) {
+            // Array of type
+            getNext();
+            getNext();
+        }
+        return typeExprNode;
     }
 
-    // Variable Action Parsing
     AstNode varDeclaration() {
         bool isConstant = false;
+        
         if (curTok.matches(KEYWORD, "const")) {
             isConstant = true;
+            getNext();
+        }
+
+        if (!curTok.matches(KEYWORD, "var")) {
+            throw Exception("Expected 'var keyword' " + curTok.pos.toString());
         }
         getNext();
 
         if (!curTok.matches(ID)) {
-            throw Exception("Expected identifier");
+            throw Exception("Expected identifier " + curTok.pos.toString());
         }
         Token varNameTok = curTok;
         getNext();
 
+        // Optional type declaration
+        if (curTok.matches(COLON)) {
+            getNext();
+
+            AstNode typeExprNode = typeExpr();
+            if (typeExprNode == nullptr) {
+                throw Exception("Expected type after ':' " + curTok.pos.toString());
+            }
+        }
+
         if (!curTok.matches(OP, "=")) {
-            throw Exception("Expected '='");
+            throw Exception("Expected '=' " + curTok.pos.toString());
         }
         getNext();
 
         AstNode expr_node = expr();
         if (expr_node == nullptr) {
-            throw Exception("Expected expression");
+            throw Exception("Expected expression " + curTok.pos.toString());
         }
 
         return AstNode(new VarDeclarationNode(varNameTok, expr_node, isConstant));
@@ -187,8 +226,6 @@ public:
         return AstNode(new VarAssignNode(varNameTok, expr_node));
     }
 
-
-    // If Statements
     AstNode ifStatement() {
         std::vector<AstNode> caseConditions;
         std::vector<std::vector<AstNode>> caseStatements;
@@ -286,7 +323,6 @@ public:
         return AstNode(new IfNode(caseConditions, caseStatements, elseCaseStatements));
     }
 
-    // Loop Parsing
     AstNode forStatement() {
         if (!curTok.matches(KEYWORD, "for")) {
             throw Exception("Expected keyword 'for'");
@@ -300,7 +336,7 @@ public:
 
         AstNode init_statement = statement();
         if (init_statement == nullptr) {
-            throw Exception("Expected  statement");
+            throw Exception("Expected statement");
         }
 
         if (!curTok.matches(SEMICOLON)) {
@@ -320,14 +356,13 @@ public:
 
         AstNode update_statement = statement();
         if (update_statement == nullptr) {
-            throw Exception("Expected  statement");
+            throw Exception("Expected statement");
         }
 
         if (!curTok.matches(RPAREN)) {
             throw Exception("Expected ')'");
         }
         getNext();
-
 
         if (!curTok.matches(LBRACE)) {
             throw Exception("Expected '{'");
@@ -343,6 +378,7 @@ public:
 
         return AstNode(new ForNode(init_statement, cond_node, update_statement, statement_list));
     }
+
     AstNode whileStatement() {
         if (!curTok.matches(KEYWORD, "while")) {
             throw Exception("Expected keyword 'while'");
@@ -379,9 +415,8 @@ public:
         return AstNode(new WhileNode(cond_node, statement_list));
     }
 
-    // Function Parsing (PassableFunctions?)
     AstNode functionDef() {
-        if (!curTok.matches(KEYWORD, "fun")) {
+        if (!curTok.matches(KEYWORD, "fn")) {
             throw Exception("Expected keyword 'fun'");
         }
         getNext();
@@ -433,40 +468,6 @@ public:
         return AstNode(new FunctionDefNode(functionNameTok, argNames, statement_list));
     }
 
-    //AstNode constructorStatement();
-
-    // Helper for parsing function calls
-    AstNode functionCall(AstNode atomNode) {
-        while (curTok.matches(LPAREN)) {
-            getNext();
-            std::vector<AstNode> argNodes;
-
-            AstNode expr_node = expr();
-            if (expr_node != nullptr) {
-                argNodes.push_back(expr_node);
-            }
-
-            while (curTok.matches(COMMA)) {
-                getNext();
-
-                expr_node = expr();
-                if (expr_node == nullptr) {
-                    throw Exception("Expected expression after ','");
-                }
-
-                argNodes.push_back(expr_node);
-            }
-
-            if (!curTok.matches(RPAREN)) {
-                throw Exception("Expected ')'");
-            }
-            getNext();
-
-            atomNode = AstNode(new FunctionCallNode(atomNode, argNodes));
-        }
-        return atomNode;
-    }
-
     AstNode returnStatement() {
         if (!curTok.matches(KEYWORD, "return")) {
             throw Exception("Expected keyword 'return'");
@@ -495,15 +496,14 @@ public:
         return AstNode(new ContinueNode());
     }
 
-    // Structure Parsing
-    AstNode classDef() {
-        if (!curTok.matches(KEYWORD, "class")) {
-            throw Exception("Expected keyword 'class'");
+    AstNode structureDef() {
+        if (!curTok.matches(KEYWORD, "type")) {
+            throw Exception("Expected keyword 'type'");
         }
         getNext();
 
         if (!curTok.matches(ID)) {
-            throw Exception("Expected class name identifier");
+            throw Exception("Expected structure name");
         }
         Token classNameTok = curTok;
         getNext();
@@ -520,7 +520,7 @@ public:
         }
         getNext();
 
-        return AstNode(new ClassDefNode(classNameTok, classStatements));
+        return AstNode(new StructureDefNode(classNameTok, classStatements));
     }
 
     // Expression Parsing
@@ -551,11 +551,13 @@ public:
     AstNode modifier() {
         AstNode returnNode = atom();
 
-        // Match function call or indexAccess
-        while (curTok.matches(LPAREN) || curTok.matches(DOT) || curTok.matches(LBRACKET)) {
+        // Match function call, attribute access, index access or attribute assignment
+        while (curTok.matches(LPAREN) || curTok.matches(DOT) || curTok.matches(LBRACKET) ||
+            curTok.matches(OP, "=")) {
             returnNode = call(returnNode);
             returnNode = attributeAccess(returnNode);
-            returnNode = indexAccess(returnNode);
+            //returnNode = indexAccess(returnNode);
+            returnNode = attributeAssign(returnNode);
         }
 
         return returnNode;
@@ -607,7 +609,7 @@ public:
         return node;
     }
 
-    AstNode indexAccess(AstNode node) {
+    /*AstNode indexAccess(AstNode node) {
         while (curTok.matches(LBRACKET)) {
             Token startTok = curTok;
             getNext();
@@ -625,51 +627,75 @@ public:
             node = AstNode(new IndexAccessNode(node, exprNode));
         }
         return node;
+    }*/
+
+    AstNode attributeAssign(AstNode node) {
+        if (curTok.matches(OP, "=")) {
+            getNext();
+
+            AstNode valueNode = expr();
+            if (valueNode == nullptr) {
+                throw Exception("Expected value after '='");
+            }
+
+            node = AstNode(new AttributeAssignNode(node, valueNode));
+        }
+        return node;
     }
+
+    /*AstNode indexAssign(AstNode node) {
+        if (curTok.matches(OP, "=")) {
+            getNext();
+
+            AstNode valueNode = expr();
+            if (valueNode == nullptr) {
+                throw Exception("Expected value after '='");
+            }
+
+            node = AstNode(new AttributeAssignNode(node, valueNode));
+        }
+        return node;
+    }*/
 
     AstNode atom() {
         Token tok = curTok;
         std::unordered_set<std::string> unaryOps = { "+", "-", "!"};
 
-        if (tok.matches(OP, unaryOps)) {
+        if (tok.matches(OP, unaryOps)) { // Unary Operation
             getNext();
-            auto node = atom();
+
+            AstNode node = atom();
             if (node == nullptr) {
                 throw Exception("Expected atom after unary operator");
             }
             return AstNode(new UnaryOpNode(tok, node));
         }
-        else if (curTok.matches(KEYWORD, "new")) {
+        else if (curTok.matches(KEYWORD, "new")) { // Contructor Call
             getNext();
 
-            AstNode functionCallNode = expr();
-            if (functionCallNode == nullptr) {
+            AstNode structDefNode = expr();
+            if (structDefNode == nullptr) {
                 throw new Exception("Expected constructor call after new keyword");
             }
-            return AstNode(new ConstructorCallNode(functionCallNode));
+            return AstNode(new ConstructorCallNode(structDefNode));
         }
-        else if (tok.matches(INT)) {
+        else if (tok.matches(INT)) { // Integer
             getNext();
-            return AstNode(new NumberNode(tok));
+            return AstNode(new IntNode(tok));
         }
-        else if (tok.matches(DOUBLE)) {
+        else if (tok.matches(FLOAT)) { // Float
             getNext();
-            return AstNode(new NumberNode(tok));
+            return AstNode(new FloatNode(tok));
         }
-        else if (tok.matches(STRING)) {
+        else if (tok.matches(STRING)) { // String
             getNext();
             return AstNode(new StringNode(tok));
         }
-        else if (tok.matches(ID)) {
-            if (lookAhead().matches(OP, "=")) {
-                return varAssign();
-            }
-            else {
-                getNext();
-                return AstNode(new VarAccessNode(tok));
-            }
+        else if (tok.matches(ID)) { // Variable Access
+            getNext();
+            return AstNode(new VarAccessNode(tok));
         }
-        else if (tok.matches(LBRACKET)) {
+        else if (tok.matches(LBRACKET)) { // List Creation
             getNext();
             std::vector<AstNode> listValueNodes;
 
@@ -695,7 +721,7 @@ public:
             getNext();
             return AstNode(new ListNode(listValueNodes));
         }
-        else if (tok.matches(LPAREN)) {
+        else if (tok.matches(LPAREN)) { // Parenthesis
             getNext();
             AstNode exprNode = expr();
             if (exprNode == nullptr) {
@@ -729,5 +755,4 @@ public:
 
         return left;
     }
-
 };

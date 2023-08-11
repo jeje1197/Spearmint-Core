@@ -2,6 +2,7 @@
 
 #include <string>
 #include <iostream>
+
 class Exception {
 public:
     std::string message;
@@ -10,11 +11,7 @@ public:
         this->message = message;
     }
 
-    Exception(std::string message, char charToAppend) {
-        this->message = message + charToAppend;
-    }
-
-    std::string getMessage() {
-        return this->message;
+    void show() {
+        std::cout << "Exception: " + this->message << std::endl;
     }
 };

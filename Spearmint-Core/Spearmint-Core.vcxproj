@@ -130,11 +130,22 @@
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AstNodes.h" />
-    <ClInclude Include="Exception.h" />
-    <ClInclude Include="Lexer.h" />
-    <ClInclude Include="Parser.h" />
-    <ClInclude Include="Token.h" />
+    <ClInclude Include="exception\Exception.h" />
+    <ClInclude Include="interpreter\BuiltInFunctions.h" />
+    <ClInclude Include="interpreter\Classes.h" />
+    <ClInclude Include="interpreter\Context.h" />
+    <ClInclude Include="interpreter\Interpreter.h" />
+    <ClInclude Include="lexer\Lexer.h" />
+    <ClInclude Include="lexer\Token.h" />
+    <ClInclude Include="parser\AstNode.h" />
+    <ClInclude Include="parser\Parser.h" />
+    <ClInclude Include="lexer\Position.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="examples\List.spm" />
+    <None Include="examples\script.spm" />
+    <None Include="examples\test.spm" />
+    <None Include="stdlib\List.spm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

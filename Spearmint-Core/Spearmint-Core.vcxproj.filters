@@ -20,20 +20,41 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Token.h">
+    <ClInclude Include="exception\Exception.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Lexer.h">
+    <ClInclude Include="interpreter\BuiltInFunctions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Exception.h">
+    <ClInclude Include="interpreter\Classes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Parser.h">
+    <ClInclude Include="interpreter\Context.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AstNodes.h">
+    <ClInclude Include="interpreter\Interpreter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="lexer\Lexer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lexer\Token.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="parser\AstNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="parser\Parser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lexer\Position.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="examples\script.spm" />
+    <None Include="examples\List.spm" />
+    <None Include="stdlib\List.spm" />
+    <None Include="examples\test.spm" />
   </ItemGroup>
 </Project>

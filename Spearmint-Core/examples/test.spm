@@ -1,0 +1,57 @@
+# Welcome to the Spearmint Programming Language
+
+fn welcome() {
+	println("Welcome to the Spearmint Programming Language");
+};
+
+fn testIf() {
+	var i = 5;
+	if (i < 0) {
+		println("Negative number");
+	} else if (i > 0) {
+		println("Positive number");
+	} else {
+		println("Zero");
+	};
+};
+
+fn testLoop() {
+	var i = 0;
+	while (i < 10) {
+		println("Loop Counter: " + i);
+		i = i + 1;
+	};
+};
+
+type Person {
+	var name = "";
+	var age = 0;
+};
+
+fn testStructure() {
+	fn toString(p) {
+		println("Person name: '" + p.name + "', age: " + p.age);
+	};
+
+	var p = new Person;
+	p.name = "Joseph";
+	p.age = 23;
+	toString(p);
+	p.age = 25;
+	toString(new Person);
+	toString(p);
+};
+
+# This is the entry point of execution
+fn main() {
+	welcome();
+	testIf();
+	testLoop();
+	testStructure();
+};
+
+
+
+# 
+main();
+

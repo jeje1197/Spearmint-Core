@@ -1,0 +1,25 @@
+# Example script in Spearmint Programmng Language
+
+# Defining a class
+class User {
+	var name = "";
+	var age = "";
+
+	fn constructor(name, age) {
+		this.name = name;
+		this.age = age;
+	};
+
+	fn toString() {
+		return "<User name=" + this.name + ", age=" + this.age + ">";
+	};
+};
+
+print("Enter your name: ");
+var name = input();
+
+print("Enter your age: ");
+var age = input();
+
+var user = new User(name, age);
+println(user.toString());

@@ -1,0 +1,92 @@
+----------
+Spearmint Programming Language
+
+This is the specification for the Spearmint Programming Language (SPM).
+This document describes the features a Spearmint interpreter must support. It does not
+tell you how to implement it.
+
+Created by Joseph E
+----------
+
+Spearmint is a simple scripting language with support for 
+
+Spearmint has 5 built-in datatypes:
+	Integer,
+	Float,
+	Boolean,
+	String,
+	List,
+
+Spearmint also supports:
+	- User Defined Structures
+
+
+Imports
+	The import keyword is used to make code in one module available in another.
+	Ex. 
+		import "filename.txt"
+
+Variables
+	1) Declaration
+		Variables must be declared with an initial value before they can be used.
+		Ex. 
+			var myVar = 6
+
+	2) Reassignment
+		Once declared, a variable can have its value reassigned.
+		Ex.
+			myVar = 2
+
+	3) Accessing
+		To access a variable, just type its name.
+		Ex. 
+			println(myVar)
+
+	4) Dynamic Typing
+		Variables are dynamically typed, meaning that they can change types during the execution
+		of a program
+
+If Statements
+	
+Loops
+	For Each
+	Ex.
+		foreach (var item : [1, 2, 3, 4]) {
+			println(item)
+		}
+
+	While
+	Ex.
+		while (i < 10) {
+			println(i)
+			i = i+1
+		}
+	
+Functions
+	1) Definition
+	Ex.
+		fn myFunc(a, b) {
+			return a + b
+		}
+
+	2) Call
+	Ex.
+		println(myFunc(2, 3))
+
+Lists
+	1) Creation
+	Ex.
+		var myList = [1, 2] or,
+		var myList = list()
+
+	2) Operations
+	Ex.
+		myList.append(3)
+		myList.remove(2)
+		myList.find("Cookies")
+
+User Defined Structures
+	1) Definition
+	Ex.
+		
+Operators
